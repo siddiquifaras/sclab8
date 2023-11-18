@@ -1,11 +1,10 @@
-/* Copyright (c) 2015-2016 MIT 6.005 course staff, all rights reserved.
- * Redistribution of original or derived work requires permission of course staff.
- */
 package graph;
 
 import static org.junit.Assert.*;
 
-import java.util.Collections;
+
+import java.util.Map;
+import java.util.Set;
 
 import org.junit.Test;
 
@@ -18,9 +17,6 @@ import org.junit.Test;
  * Your tests MUST NOT refer to specific concrete implementations.
  */
 public abstract class GraphInstanceTest {
-    
-    // Testing strategy
-    //   TODO
     
     /**
      * Overridden by implementation-specific test classes.
@@ -35,12 +31,70 @@ public abstract class GraphInstanceTest {
     }
     
     @Test
-    public void testInitialVerticesEmpty() {
-        // TODO you may use, change, or remove this test
-        assertEquals("expected new graph to have no vertices",
-                Collections.emptySet(), emptyInstance().vertices());
+    public void testEmptyGraphVertices() {
+        Graph<String> graph = emptyInstance();
+        assertTrue("Expected new graph to have no vertices", graph.vertices().isEmpty());
     }
-    
-    // TODO other tests for instance methods of Graph
-    
+
+    @Test
+    public void testAddVertices() {
+        Graph<String> graph = emptyInstance();
+        assertTrue(graph.add("Vertex1"));
+        assertTrue(graph.add("Vertex2"));
+        assertTrue(graph.add("Vertex3"));
+
+        Set<String> expectedVertices = Set.of("Vertex1", "Vertex2", "Vertex3");
+        assertEquals("Vertices after adding", expectedVertices, graph.vertices());
+    }
+
+    @Test
+    public void testSetEdgesAndQuerySourcesTargets() {
+        Graph<String> graph = emptyInstance();
+        graph.add("Vertex1");
+        graph.add("Vertex2");
+        graph.add("Vertex3");
+
+        assertEquals("Previous weight of non-existing edge", 0, graph.set("Vertex1", "Vertex2", 5));
+        assertEquals("Previous weight of non-existing edge", 0, graph.set("Vertex2", "Vertex3", 10));
+
+        Map<String, Integer> sourcesMap = graph.sources("Vertex2");
+        Map<String, Integer> targetsMap = graph.targets("Vertex1");
+
+        assertEquals("Sources for Vertex2", Map.of("Vertex1", 5), sourcesMap);
+        assertEquals("Targets for Vertex1", Map.of("Vertex2", 5), targetsMap);
+    }
+
+    @Test
+    public void testRemoveVertices() {
+        Graph<String> graph = emptyInstance();
+        graph.add("Vertex1");
+        graph.add("Vertex2");
+        graph.add("Vertex3");
+
+        assertTrue(graph.remove("Vertex1"));
+        assertFalse(graph.remove("Vertex1")); // Removing again should return false
+
+        Set<String> expectedVerticesAfterRemoval = Set.of("Vertex2", "Vertex3");
+        assertEquals("Vertices after removal", expectedVerticesAfterRemoval, graph.vertices());
+    }
+
+    @Test
+    public void testRemoveEdges() {
+        Graph<String> graph = emptyInstance();
+        graph.add("Vertex1");
+        graph.add("Vertex2");
+        graph.add("Vertex3");
+
+        graph.set("Vertex1", "Vertex2", 5);
+        graph.set("Vertex2", "Vertex3", 10);
+
+        int previousWeight = graph.set("Vertex2", "Vertex3", 0); // Remove the edge
+        assertEquals("Previous weight of removed edge", 10, previousWeight);
+
+        Map<String, Integer> sourcesMap = graph.sources("Vertex2");
+        Map<String, Integer> targetsMap = graph.targets("Vertex1");
+
+        assertTrue("Sources for Vertex2 after removal", sourcesMap.isEmpty());
+        assertTrue("Targets for Vertex1 after removal", targetsMap.isEmpty());
+    }
 }
