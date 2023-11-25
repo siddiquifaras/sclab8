@@ -3,8 +3,20 @@
  */
 package poet;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.Set;
 
 import graph.Graph;
 
@@ -55,12 +67,26 @@ public class GraphPoet {
     private final Graph<String> graph = Graph.empty();
     
     // Abstraction function:
-    //   TODO
+    //   AF(graph) = a poetry generator
+    //
     // Representation invariant:
-    //   TODO
+    //   vertices of the graph are non-empty case-insensitive strings 
+    //   of non-space non-newline characters
+    //
     // Safety from rep exposure:
-    //   TODO
+    //   graph field is private and final;
     
+    // Check that the rep invariant is true
+    private void checkRep() {
+        for (String vertex : graph.vertices()) {
+            String copy = vertex.toLowerCase().trim().replaceAll("\\s+", "");
+            
+            assert vertex.equals(copy);
+            assert !vertex.equals("");
+        }
+    }
+    
+    // constructor
     /**
      * Create a new poet with the graph from corpus (as described above).
      * 
@@ -68,11 +94,41 @@ public class GraphPoet {
      * @throws IOException if the corpus file cannot be found or read
      */
     public GraphPoet(File corpus) throws IOException {
-        throw new RuntimeException("not implemented");
+        // read file and add words to wordList
+        List<String> wordList = new ArrayList<>();
+        Scanner s = new Scanner(new BufferedReader(new FileReader(corpus)));
+        while (s.hasNext()) {
+          wordList.add(s.next());
+        }
+        s.close();
+        // convert to lower case
+        for (int i=0; i < wordList.size(); i++) {
+            wordList.set(i, wordList.get(i).toLowerCase());
+        }
+        // add words to graph
+        for (String word : wordList) {
+            if (!graph.vertices().contains(word)) {
+                graph.add(word);
+            }
+        }
+        // set edges
+        for (int i = 0; i < wordList.size()-1; i++) {
+            String src = wordList.get(i);
+            String trg = wordList.get(i+1);
+            Map<String, Integer> targets = graph.targets(src);
+            
+            if (targets.containsKey(trg)) {
+                int oldWeight = targets.get(trg);
+                graph.set(src, trg, oldWeight + 1);
+            }
+            else {
+                graph.set(src, trg, 1);
+            }
+        }
+        checkRep();
     }
     
-    // TODO checkRep
-    
+    // methods
     /**
      * Generate a poem.
      * 
@@ -80,9 +136,48 @@ public class GraphPoet {
      * @return poem (as described above)
      */
     public String poem(String input) {
-        throw new RuntimeException("not implemented");
+        List<String> inputList = Arrays.asList(input.trim().split("\\s+"));
+        List<String> result = new ArrayList<>();
+        
+        for (int i = 0; i < inputList.size()-1; i++) {
+            String bridge = "";
+            String src = inputList.get(i).toLowerCase();
+            String trg = inputList.get(i+1).toLowerCase();
+            Map<String, Integer> trgSources = graph.sources(trg);
+            Map<String, Integer> srcTargets = graph.targets(src);
+            Set<String> s1 = new HashSet<>(trgSources.keySet());
+            Set<String> s2 = new HashSet<>(srcTargets.keySet());
+            
+            // keys common to both maps
+            Set<String> commonKeys = new HashSet<String>(s2);
+            commonKeys.retainAll(s1);
+            
+            // find highest-weighted bridge words
+            Map<String, Integer> bridgeMap = new HashMap<>();
+            if (commonKeys.size() > 0) {
+                for (String bridgeKey: commonKeys) {
+                    int totalWeight = srcTargets.get(bridgeKey) + trgSources.get(bridgeKey);
+                    bridgeMap.put(bridgeKey, totalWeight);
+                }
+                List<Map.Entry<String, Integer>> nameList = new ArrayList<>(bridgeMap.entrySet());
+                Collections.sort(nameList, new Comparator<Map.Entry<String, Integer>>() {
+                    public int compare(Map.Entry<String, Integer> entry1, Map.Entry<String, Integer> entry2) {
+                        return -entry1.getValue().compareTo(entry2.getValue());
+                    }
+                });
+                bridge = nameList.get(0).getKey();
+            }
+            result.add(inputList.get(i));
+            if(!bridge.equals("")) {
+                result.add(bridge);
+            }
+        }
+        result.add(inputList.get(inputList.size()-1));
+        checkRep();
+        return String.join(" ", result);
     }
     
-    // TODO toString()
-    
+    @Override public String toString() {
+        return graph.toString();
+    }
 }
